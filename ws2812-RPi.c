@@ -87,6 +87,9 @@
 //				Adafruit's NeoPixel driver:
 //				https://github.com/adafruit/Adafruit_NeoPixel/blob/master/Adafruit_NeoPixel.cpp
 
+// User defined options (To save digging though the code to change things)
+#define NUM_PIXELS 38	// The number of pixels in the chain
+
 
 // =================================================================================================
 //	.___              .__            .___             
@@ -524,8 +527,7 @@ typedef struct {
 
 unsigned int numLEDs;		// How many LEDs there are on the chain
 
-#define LED_BUFFER_LENGTH 24
-Color_t LEDBuffer[LED_BUFFER_LENGTH];
+Color_t LEDBuffer[NUM_PIXELS];
 
 // PWM waveform buffer (in words), 16 32-bit words are enough to hold 170 wire bits.
 // That's OK if we only transmit from the FIFO, but for DMA, we will use a much larger size.
@@ -554,7 +556,7 @@ void clearPWMBuffer() {
 // Zero out the LED buffer
 void clearLEDBuffer() {
 	int i;
-	for(i=0; i<LED_BUFFER_LENGTH; i++) {
+	for(i=0; i<NUM_PIXELS; i++) {
 		LEDBuffer[i].r = 0;
 		LEDBuffer[i].g = 0;
 		LEDBuffer[i].b = 0;
@@ -579,10 +581,11 @@ unsigned char setPixelColor(unsigned int pixel, unsigned char r, unsigned char g
 		printf("Unable to set pixel %d (less than zero?)\n", pixel);
 		return false;
 	}
-	if(pixel > LED_BUFFER_LENGTH - 1) {
-		printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, LED_BUFFER_LENGTH);
-		return false;
-	}
+	// // Lets break things and comment out this
+	// if(pixel > NUM_PIXELS - 1) {
+	// 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
+	// 	return false;
+	// }
 	LEDBuffer[pixel] = RGB2Color(r, g, b);
 	return true;
 }
@@ -593,10 +596,10 @@ unsigned char setPixelColorT(unsigned int pixel, Color_t c) {
 		printf("Unable to set pixel %d (less than zero?)\n", pixel);
 		return false;
 	}
-	if(pixel > LED_BUFFER_LENGTH - 1) {
-		printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, LED_BUFFER_LENGTH);
-		return false;
-	}
+	// if(pixel > NUM_PIXELS - 1) {
+	// 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
+	// 	return false;
+	// }
 	LEDBuffer[pixel] = c;
 	return true;
 }
@@ -607,10 +610,10 @@ Color_t getPixelColor(unsigned int pixel) {
 		printf("Unable to get pixel %d (less than zero?)\n", pixel);
 		return RGB2Color(0, 0, 0);
 	}
-	if(pixel > LED_BUFFER_LENGTH - 1) {
-		printf("Unable to get pixel %d (LED buffer is %d pixels long)\n", pixel, LED_BUFFER_LENGTH);
-		return RGB2Color(0, 0, 0);
-	}
+	// if(pixel > NUM_PIXELS - 1) {
+	// 	printf("Unable to get pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
+	// 	return RGB2Color(0, 0, 0);
+	// }
 	return LEDBuffer[pixel];
 }
 
@@ -677,7 +680,7 @@ unsigned char getPWMBit(unsigned int bitPos) {
 void dumpLEDBuffer() {
 	int i;
 	printf("Dumping LED buffer:\n");
-	for(i=0; i<LED_BUFFER_LENGTH; i++) {
+	for(i=0; i<NUM_PIXELS; i++) {
 		printf("R:%X G:%X B:%X\n", LEDBuffer[i].r, LEDBuffer[i].g, LEDBuffer[i].b);
 	}
 }
@@ -1418,7 +1421,7 @@ int main(int argc, char **argv) {
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	// How many LEDs?
-	numLEDs = 24;
+	numLEDs = NUM_PIXELS;
 
 	// How bright? (Recommend 0.2 for direct viewing @ 3.3V)
 	setBrightness(DEFAULT_BRIGHTNESS);
