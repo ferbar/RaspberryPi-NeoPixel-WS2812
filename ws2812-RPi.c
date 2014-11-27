@@ -317,6 +317,12 @@
 #define DMA_DEBUG_FIFO_ERROR			1		// Operational read FIFO error (clear by setting)
 #define DMA_DEBUG_READ_LAST_NOT_SET		0		// AXI bus read last signal not set (clear by setting)
 
+// Define the functions
+// For now I am being lazy and only defining the ones I need for my changes.
+unsigned char setPixelColor(unsigned int pixel, unsigned char r, unsigned char g, unsigned char b);
+void show();
+unsigned int numPixels();
+
 // Control Block (CB) - this tells the DMA controller what to do.
 typedef struct {
 	unsigned int
@@ -433,6 +439,14 @@ static void udelay(int us) {
 // Shutdown functions
 // --------------------------------------------------------------------------------------------------
 static void terminate(int dummy) {
+	// zero out all the LED's
+	int i;
+	for (i=0; i < numPixels(); i++) {
+		setPixelColor(i, 0, 0, 0);
+	}
+	show();
+
+
 	// Shut down the DMA controller
 	if(dma_reg) {
 		CLRBIT(dma_reg[DMA_CS], DMA_CS_ACTIVE);
@@ -494,8 +508,12 @@ static void * map_peripheral(uint32_t base, uint32_t len) {
 	int fd = open("/dev/mem", O_RDWR);
 	void * vaddr;
 
-	if (fd < 0)
-		fatal("Failed to open /dev/mem: %m\n");
+	if (fd < 0) {
+		// Got a segmentation fault when not running as root
+		// So instead of using fatal(); I'm going to print the error (and a hint) and then exit();
+		printf("Failed to open /dev/mem: %m (try running as root)\n");
+		exit(EXIT_FAILURE);
+	}
 	vaddr = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base);
 	if (vaddr == MAP_FAILED)
 		fatal("Failed to map peripheral at 0x%08x: %m\n", base);
