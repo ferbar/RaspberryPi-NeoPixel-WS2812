@@ -2,8 +2,13 @@
 #define WS2812_HEADER
 
 // User defined options (To save digging though the code to change things)
-#define NUM_PIXELS 38	// The number of pixels in the chain
+#ifndef NUM_PIXELS
+#define NUM_PIXELS 16	// The number of pixels in the chain
+#endif
+
+#ifndef DEFAULT_BRIGHTNESS
 #define DEFAULT_BRIGHTNESS 1.0 
+#endif
 
 #include <stdio.h>
 #include <string.h>
