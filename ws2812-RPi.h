@@ -323,13 +323,5 @@ void dumpDMA();
 void initHardware();
 void startTransfer();
 void show();
-Color_t Wheel(uint8_t WheelPos);
-void colorWipe(Color_t c, uint8_t wait);
-void rainbow(uint8_t wait);
-void rainbowCycle(uint8_t wait);
-void theaterChase(Color_t c, uint8_t wait);
-void theaterChaseRainbow(uint8_t wait);
-void effectsDemo();
-int main(int argc, char **argv); // FIXME I don't need this here, just copying all the existing functions over
 
 #endif

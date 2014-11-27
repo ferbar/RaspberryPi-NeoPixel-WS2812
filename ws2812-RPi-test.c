@@ -1,4 +1,5 @@
 #include "ws2812-RPi.c"
+#include "ws2812-RPi-effects.c"
 
 void effectsDemo();
 
