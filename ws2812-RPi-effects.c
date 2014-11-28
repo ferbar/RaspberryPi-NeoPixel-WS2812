@@ -17,6 +17,7 @@ void rainbow(uint8_t wait);
 void rainbowCycle(uint8_t wait);
 void theaterChase(Color_t c, uint8_t wait);
 void theaterChaseRainbow(uint8_t wait);
+void rainbowCycle_f(uint8_t wait);
 
 Color_t Wheel(uint8_t WheelPos) {
 	if(WheelPos < 85) {
@@ -41,6 +42,16 @@ void colorWipe(Color_t c, uint8_t wait) {
 	}
 }
 
+// Fill the dots one after the other with a color
+void colorWipe_r(Color_t c, uint8_t wait) {
+	uint16_t i;
+	for(i=numPixels(); i>0; i--) {
+		setPixelColorT(i, c);
+		show();
+		usleep(wait * 1000);
+	}
+}
+
 // Rainbow
 void rainbow(uint8_t wait) {
 	uint16_t i, j;
@@ -54,11 +65,17 @@ void rainbow(uint8_t wait) {
 	}
 }
 
+
 // Slightly different, this makes the rainbow equally distributed throughout
 void rainbowCycle(uint8_t wait) {
 	uint16_t i, j;
-
-	for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
+	j = 0;
+	for(i=0; i<numPixels(); i++) {
+		setPixelColorT(i, Wheel(((i * 256 / numPixels()) + j) & 255));
+		show();
+		usleep(50000);
+	}
+	for(j = 0; j<256*5; j++) { // 5 cycles of all colors on wheel
 		for(i=0; i<numPixels(); i++) {
 			setPixelColorT(i, Wheel(((i * 256 / numPixels()) + j) & 255));
 		}
@@ -66,6 +83,38 @@ void rainbowCycle(uint8_t wait) {
 		usleep(wait * 1000);
 	}
 }
+
+// Slightly different, this makes the rainbow equally distributed throughout
+void rainbowCycle_f(uint8_t wait) {
+	uint16_t i, j;
+
+	for(j=256*5; j>0; j--) { // 5 cycles of all colors on wheel
+		for(i=0; i<numPixels(); i++) {
+			setPixelColorT(i, Wheel(((i * 256 / numPixels()) + j) & 255));
+		}
+		show();
+		usleep(wait * 1000);
+	}
+}
+
+// Slightly different, this makes the rainbow equally distributed throughout
+void rainbowCycle_wipe(uint8_t wait) {
+	uint16_t i, j;
+	j = 0;
+	for(i=numPixels(); i>0; i--) {
+		setPixelColorT(i, Wheel(((i * 256 / numPixels()) + j) & 255));
+		show();
+		usleep(50000);
+	}
+	for(j; j<256*5; j++) { // 5 cycles of all colors on wheel
+		for(i=0; i<numPixels(); i++) {
+			setPixelColorT(i, Wheel(((i * 256 / numPixels()) + j) & 255));
+		}
+		show();
+		usleep(wait * 1000);
+	}
+}
+
 
 //Theatre-style crawling lights.
 void theaterChase(Color_t c, uint8_t wait) {
