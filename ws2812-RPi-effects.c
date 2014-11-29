@@ -9,7 +9,7 @@ void rainbow(uint8_t wait);
 void rainbowCycle(uint8_t wait);
 void theaterChase(Color_t c, uint8_t wait);
 void theaterChaseRainbow(uint8_t wait);
-void rainbowCycle_f(uint8_t wait);
+void rainbowCycle_r(uint8_t wait);
 
 Color_t Wheel(uint8_t WheelPos) {
 	if(WheelPos < 85) {
