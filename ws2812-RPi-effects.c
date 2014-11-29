@@ -10,6 +10,7 @@ void rainbowCycle(uint8_t wait);
 void theaterChase(Color_t c, uint8_t wait);
 void theaterChaseRainbow(uint8_t wait);
 void rainbowCycle_r(uint8_t wait);
+void rainbowCycle_wipe(uint8_t wait);
 
 Color_t Wheel(uint8_t WheelPos) {
 	if(WheelPos < 85) {
@@ -147,4 +148,20 @@ void theaterChaseRainbow(uint8_t wait) {
 			}
 		}
 	}
+}
+
+// "Rain Fall" effect - Test
+void RainFall(Color_t c,uint8_t wait) {
+	int i, j, k;
+	j = (numPixels() / 2) - 1;
+	k = j + 1;
+	for (j,k; j >= 0; j--,k++) {
+		//printf("Pixel - %i %i\n", j, k);
+		setPixelColorT(j, c);
+		setPixelColorT(k, c);
+		show();
+		usleep(wait * 10000);
+	}
+	usleep(5000000);
+	//printf("Done:\n");
 }
