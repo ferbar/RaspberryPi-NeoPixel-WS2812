@@ -38,8 +38,8 @@ void colorWipe(Color_t c, uint8_t wait) {
 // Fill the dots one after the other with a color
 // Same as above - just the other way around the chain
 void colorWipe_r(Color_t c, uint8_t wait) {
-	uint16_t i;
-	for(i=numPixels(); i>0; i--) {
+	int16_t i;
+	for(i=numPixels()-1; i >= 0; i--) {
 		setPixelColorT(i, c);
 		show();
 		usleep(wait * 1000);
