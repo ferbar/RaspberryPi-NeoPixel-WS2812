@@ -1,11 +1,3 @@
-// =================================================================================================
-//	___________ _____  _____              __          
-//	\_   _____// ____\/ ____\____   _____/  |_  ______
-//	 |    __)_\   __\\   __\/ __ \_/ ___\   __\/  ___/
-//	 |        \|  |   |  | \  ___/\  \___|  |  \___ \ 
-//	/_______  /|__|   |__|  \___  >\___  >__| /____  >
-//	        \/                  \/     \/          \/ 
-// =================================================================================================
 // The effects in this section are adapted from the Adafruit NeoPixel library at:
 // https://github.com/adafruit/Adafruit_NeoPixel/blob/master/examples/strandtest/strandtest.ino
 
@@ -43,6 +35,7 @@ void colorWipe(Color_t c, uint8_t wait) {
 }
 
 // Fill the dots one after the other with a color
+// Same as above - just the other way around the chain
 void colorWipe_r(Color_t c, uint8_t wait) {
 	uint16_t i;
 	for(i=numPixels(); i>0; i--) {
@@ -85,7 +78,8 @@ void rainbowCycle(uint8_t wait) {
 }
 
 // Slightly different, this makes the rainbow equally distributed throughout
-void rainbowCycle_f(uint8_t wait) {
+// Same as above - just the other way around the chain
+void rainbowCycle_r(uint8_t wait) {
 	uint16_t i, j;
 
 	for(j=256*5; j>0; j--) { // 5 cycles of all colors on wheel
@@ -98,6 +92,7 @@ void rainbowCycle_f(uint8_t wait) {
 }
 
 // Slightly different, this makes the rainbow equally distributed throughout
+// Same as rainbowCycle() but does a colour wipe with a rainbow effect before starting the Cycle
 void rainbowCycle_wipe(uint8_t wait) {
 	uint16_t i, j;
 	j = 0;
