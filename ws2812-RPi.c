@@ -89,15 +89,6 @@
 
 #include "ws2812-RPi.h"
 
-// =================================================================================================
-//	  ________                                  .__   
-//	 /  _____/  ____   ____   ________________  |  |  
-//	/   \  ____/ __ \ /    \_/ __ \_  __ \__  \ |  |  
-//	\    \_\  \  ___/|   |  \  ___/|  | \// __ \|  |__
-//	 \______  /\___  >___|  /\___  >__|  (____  /____/
-//	        \/     \/     \/     \/           \/      
-// =================================================================================================
-
 // Convenience functions
 // --------------------------------------------------------------------------------------------------
 // Print some bits of a binary number (2nd arg is how many bits)
@@ -224,14 +215,7 @@ static void * map_peripheral(uint32_t base, uint32_t len) {
 }
 
 
-// =================================================================================================
-//	.____     ___________________      _________ __          _____  _____ 
-//	|    |    \_   _____/\______ \    /   _____//  |_ __ ___/ ____\/ ____\
-//	|    |     |    __)_  |    |  \   \_____  \\   __\  |  \   __\\   __\ 
-//	|    |___  |        \ |    `   \  /        \|  | |  |  /|  |   |  |   
-//	|_______ \/_______  //_______  / /_______  /|__| |____/ |__|   |__|   
-//	        \/        \/         \/          \/                           
-// =================================================================================================
+
 
 // Set brightness
 unsigned char setBrightness(float b) {
@@ -289,6 +273,25 @@ unsigned char setPixelColor(unsigned int pixel, unsigned char r, unsigned char g
 	return true;
 }
 
+// Set pixel color (24-bit color) with brightness modifer
+// Brightness of the whole chain will be further adjusted by the show() command
+unsigned char setPixelColor_B(unsigned int pixel, unsigned char r, unsigned char g, unsigned char b, float br) {
+	if(pixel < 0) {
+		printf("Unable to set pixel %d (less than zero?)\n", pixel);
+		return false;
+	}
+	// // Lets break things and comment out this
+	// if(pixel > NUM_PIXELS - 1) {
+	// 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
+	// 	return false;
+	// }
+	LEDBuffer[pixel] = RGB2Color(r, g, b);
+	LEDBuffer[pixel].r *= br;
+	LEDBuffer[pixel].g *= br;
+	LEDBuffer[pixel].b *= br;
+	return true;
+}
+
 // Set pixel color, by a direct Color_t
 unsigned char setPixelColorT(unsigned int pixel, Color_t c) {
 	if(pixel < 0) {
@@ -302,6 +305,28 @@ unsigned char setPixelColorT(unsigned int pixel, Color_t c) {
 	LEDBuffer[pixel] = c;
 	return true;
 }
+
+// Set pixel color, by a direct Color_t with brightness modifer
+// Brightness of the whole chain will be further adjusted by the show() command
+unsigned char setPixelColorT_B(unsigned int pixel, Color_t c, float br) {
+	if(pixel < 0) {
+		printf("Unable to set pixel %d (less than zero?)\n", pixel);
+		return false;
+	}
+	// if(pixel > NUM_PIXELS - 1) {
+	// 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
+	// 	return false;
+	// }
+	LEDBuffer[pixel] = c;
+	LEDBuffer[pixel].r *= br;
+	LEDBuffer[pixel].g *= br;
+	LEDBuffer[pixel].b *= br;
+	return true;
+}
+
+//
+
+
 
 // Get pixel color
 Color_t getPixelColor(unsigned int pixel) {
@@ -364,16 +389,6 @@ unsigned char getPWMBit(unsigned int bitPos) {
 	}
 }
 
-
-
-// =================================================================================================
-//	________        ___.
-//	\______ \   ____\_ |__  __ __  ____  
-//	 |    |  \_/ __ \| __ \|  |  \/ ___\ 
-//	 |    `   \  ___/| \_\ \  |  / /_/  >
-//	 /_______  /\___  >___  /____/\___  / 
-//	         \/     \/    \/     /_____/  
-// =================================================================================================
 
 // Dump contents of LED buffer
 void dumpLEDBuffer() {
@@ -542,17 +557,6 @@ void dumpDMA() {
 	printf("\n");
 
 }
-
-
-
-// =================================================================================================
-//	.___       .__  __      ___ ___                  .___                              
-//	|   | ____ |__|/  |_   /   |   \_____ _______  __| _/_  _  _______ _______   ____  
-//	|   |/    \|  \   __\ /    ~    \__  \\_  __ \/ __ |\ \/ \/ /\__  \\_  __ \_/ __ \ 
-//	|   |   |  \  ||  |   \    Y    // __ \|  | \/ /_/ | \     /  / __ \|  | \/\  ___/ 
-//	|___|___|  /__||__|    \___|_  /(____  /__|  \____ |  \/\_/  (____  /__|    \___  >
-//	         \/                  \/      \/           \/              \/            \/ 
-// =================================================================================================
 
 void initHardware() {
 
@@ -810,16 +814,6 @@ void startTransfer() {
 //	dumpDMA();
 }
 
-
-
-// =================================================================================================
-//	  ____ ___            .___       __           .____     ___________________          
-//	 |    |   \______   __| _/____ _/  |_  ____   |    |    \_   _____/\______ \   ______
-//	 |    |   /\____ \ / __ |\__  \\   __\/ __ \  |    |     |    __)_  |    |  \ /  ___/
-//	 |    |  / |  |_> > /_/ | / __ \|  | \  ___/  |    |___  |        \ |    `   \\___ \ 
-//	 |______/  |   __/\____ |(____  /__|  \___  > |_______ \/_______  //_______  /____  >
-//	           |__|        \/     \/          \/          \/        \/         \/     \/ 
-// =================================================================================================
 
 void show() {
 

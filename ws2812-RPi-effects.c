@@ -11,6 +11,10 @@ void theaterChase(Color_t c, uint8_t wait);
 void theaterChaseRainbow(uint8_t wait);
 void rainbowCycle_r(uint8_t wait);
 void rainbowCycle_wipe(uint8_t wait);
+void RainFall(Color_t c,uint8_t wait,int sleepafter);
+void Twinkle();
+
+float twinklearray[NUM_PIXELS];
 
 Color_t Wheel(uint8_t WheelPos) {
 	if(WheelPos < 85) {
@@ -151,7 +155,7 @@ void theaterChaseRainbow(uint8_t wait) {
 }
 
 // "Rain Fall" effect - Test
-void RainFall(Color_t c,uint8_t wait) {
+void RainFall(Color_t c,uint8_t wait,int sleepafter) {
 	int i, j, k;
 	j = (numPixels() / 2) - 1;
 	k = j + 1;
@@ -162,6 +166,30 @@ void RainFall(Color_t c,uint8_t wait) {
 		show();
 		usleep(wait * 10000);
 	}
-	usleep(5000000);
+	sleep(sleepafter);
 	//printf("Done:\n");
+}
+
+void Twinkle() {
+	int j;
+	for (j=0;j<numPixels();j++) {
+
+		if (twinklearray[j] == 0) { // LED is off - Give it a chance to turn on.
+			if ((rand() % 15) == 1) { // LED Got the change to be turned on now lets give it a random brightness level
+				twinklearray[j] = (float) rand()/RAND_MAX;
+				setPixelColor_B(j, 255, 255, 255,twinklearray[j]);
+			}
+		}
+		else if (twinklearray[j] < 0.000) {
+			twinklearray[j] = 0;
+			setPixelColor(j, 0, 0, 0);
+		}
+		else if (twinklearray[j] > 0.000) {
+			twinklearray[j] = twinklearray[j] - 0.1;
+			if (twinklearray[j]<0) twinklearray[j] = 0;
+			setPixelColor_B(j, 255, 255, 255,twinklearray[j]);
+		}
+	}
+	show();
+	usleep(100000);
 }
