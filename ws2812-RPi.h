@@ -37,6 +37,14 @@ typedef struct {		// LED buffer (this will be translated into pulses in PWMWavef
 	unsigned char b;
 } Color_t;
 
+typedef struct {		// LED buffer (this will be translated into pulses in PWMWaveform[])
+	unsigned char r;
+	unsigned char g;
+	unsigned char b;
+	unsigned int br;
+} Color_tb;
+
+
 // Control Block (CB) - this tells the DMA controller what to do.
 typedef struct {
 	unsigned int

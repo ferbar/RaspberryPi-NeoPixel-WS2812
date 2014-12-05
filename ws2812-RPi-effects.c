@@ -106,13 +106,13 @@ void rainbowCycle_wipe(uint8_t wait) {
 		show();
 		usleep(50000);
 	}
-	for(j; j<256*5; j++) { // 5 cycles of all colors on wheel
-		for(i=0; i<numPixels(); i++) {
-			setPixelColorT(i, Wheel(((i * 256 / numPixels()) + j) & 255));
-		}
-		show();
-		usleep(wait * 1000);
-	}
+	// for(j; j<256*5; j++) { // 5 cycles of all colors on wheel
+	// 	for(i=0; i<numPixels(); i++) {
+	// 		setPixelColorT(i, Wheel(((i * 256 / numPixels()) + j) & 255));
+	// 	}
+	// 	show();
+	// 	usleep(wait * 1000);
+	// }
 }
 
 
@@ -175,7 +175,7 @@ void Twinkle() {
 	for (j=0;j<numPixels();j++) {
 
 		if (twinklearray[j] == 0) { // LED is off - Give it a chance to turn on.
-			if ((rand() % 15) == 1) { // LED Got the change to be turned on now lets give it a random brightness level
+			if ((rand() % 20) == 1) { // LED Got the change to be turned on now lets give it a random brightness level
 				twinklearray[j] = (float) rand()/RAND_MAX;
 				setPixelColor_B(j, 255, 255, 255,twinklearray[j]);
 			}
@@ -192,4 +192,48 @@ void Twinkle() {
 	}
 	show();
 	usleep(100000);
+}
+
+void Twinkle_Fade() {
+	int j,i;
+	for (i=0;i<15;i++) {
+		for (j=0;j<numPixels();j++) {
+			if (twinklearray[j] < 0.000) {
+				twinklearray[j] = 0;
+				setPixelColor(j, 0, 0, 0);
+			}
+			else if (twinklearray[j] > 0.000) {
+				twinklearray[j] = twinklearray[j] - 0.1;
+				if (twinklearray[j]<0) twinklearray[j] = 0;
+				setPixelColor_B(j, 255, 255, 255,twinklearray[j]);
+			}
+		}
+		show();
+		usleep(100000);
+	}
+}
+
+void Twinkle_T(Color_t c) {
+	int j;
+	for (j=0;j<numPixels();j++) {
+
+		if (twinklearray[j] == 0) { // LED is off - Give it a chance to turn on.
+			if ((rand() % 15) == 1) { // LED Got the change to be turned on now lets give it a random brightness level
+				twinklearray[j] = (float) rand()/RAND_MAX;
+				setPixelColorT_B(j, c, twinklearray[j]);
+			}
+		}
+		else if (twinklearray[j] < 0.000) {
+			twinklearray[j] = 0;
+			setPixelColor(j, 0, 0, 0);
+		}
+		else if (twinklearray[j] > 0.000) {
+			twinklearray[j] = twinklearray[j] - 0.1;
+			if (twinklearray[j]<0) twinklearray[j] = 0;
+			setPixelColorT_B(j, c, twinklearray[j]);
+		}
+	}
+	show();
+	// usleep(100000);
+	usleep(1000000);
 }
