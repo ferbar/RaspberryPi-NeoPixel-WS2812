@@ -1,5 +1,16 @@
+
+/*
+// =================================================================================================
+//	___________ _____  _____              __          
+//	\_   _____// ____\/ ____\____   _____/  |_  ______
+//	 |    __)_\   __\\   __\/ __ \_/ ___\   __\/  ___/
+//	 |        \|  |   |  | \  ___/\  \___|  |  \___ \ 
+//	/_______  /|__|   |__|  \___  >\___  >__| /____  >
+//	        \/                  \/     \/          \/ 
+// =================================================================================================
 // The effects in this section are adapted from the Adafruit NeoPixel library at:
 // https://github.com/adafruit/Adafruit_NeoPixel/blob/master/examples/strandtest/strandtest.ino
+*/
 
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
