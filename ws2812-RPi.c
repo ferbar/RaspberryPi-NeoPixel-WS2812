@@ -87,6 +87,7 @@
 //				Adafruit's NeoPixel driver:
 //				https://github.com/adafruit/Adafruit_NeoPixel/blob/master/Adafruit_NeoPixel.cpp
 
+
 /*
 // =================================================================================================
 //	.___              .__            .___             
@@ -413,7 +414,7 @@ static void udelay(int us) {
 
 // Shutdown functions
 // --------------------------------------------------------------------------------------------------
-static void terminate(int dummy) {
+void terminate(int dummy) {
 /* --set doesn't like this ;-)
 	// zero out all the LED's
 	int i;
@@ -446,7 +447,7 @@ static void terminate(int dummy) {
 	exit(1);
 }
 
-static void fatal(char *fmt, ...) {
+void fatal(char *fmt, ...) {
 	va_list ap;
 	va_start(ap, fmt);
 	vfprintf(stderr, fmt, ap);
@@ -480,7 +481,7 @@ unsigned int mem_phys_to_virt(uint32_t phys) {
 }
 
 // Map a peripheral's IO memory into our virtual memory, so we can read/write it directly
-static void * map_peripheral(uint32_t base, uint32_t len) {
+void * map_peripheral(uint32_t base, uint32_t len) {
 	int fd = open("/dev/mem", O_RDWR);
 	void * vaddr;
 
@@ -515,6 +516,12 @@ float brightness = DEFAULT_BRIGHTNESS;
 
 unsigned int numLEDs;		// How many LEDs there are on the chain
 
+Color_t LEDBuffer[LED_BUFFER_LENGTH];
+
+// PWM waveform buffer (in words), 16 32-bit words are enough to hold 170 wire bits.
+// That's OK if we only transmit from the FIFO, but for DMA, we will use a much larger size.
+// 1024 (4096 bytes) should be enough for over 400 elements. It can be bumped up if you need more!
+unsigned int PWMWaveform[NUM_DATA_WORDS];
 
 // Set brightness
 unsigned char setBrightness(float b) {
@@ -538,7 +545,7 @@ void clearPWMBuffer() {
 // Zero out the LED buffer
 void clearLEDBuffer() {
 	int i;
-	for(i=0; i<NUM_PIXELS; i++) {
+	for(i=0; i<LED_BUFFER_LENGTH; i++) {
 		LEDBuffer[i].r = 0;
 		LEDBuffer[i].g = 0;
 		LEDBuffer[i].b = 0;
@@ -563,11 +570,10 @@ unsigned char setPixelColor(unsigned int pixel, unsigned char r, unsigned char g
 		printf("Unable to set pixel %d (less than zero?)\n", pixel);
 		return false;
 	}
-	// // Lets break things and comment out this
-	// if(pixel > NUM_PIXELS - 1) {
-	// 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
-	// 	return false;
-	// }
+	if(pixel > LED_BUFFER_LENGTH - 1) {
+	 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, LED_BUFFER_LENGTH);
+	 	return false;
+	}
 	LEDBuffer[pixel] = RGB2Color(r, g, b);
 	return true;
 }
@@ -579,11 +585,10 @@ unsigned char setPixelColor_B(unsigned int pixel, unsigned char r, unsigned char
 		printf("Unable to set pixel %d (less than zero?)\n", pixel);
 		return false;
 	}
-	// // Lets break things and comment out this
-	// if(pixel > NUM_PIXELS - 1) {
-	// 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
-	// 	return false;
-	// }
+	if(pixel > LED_BUFFER_LENGTH - 1) {
+	 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, LED_BUFFER_LENGTH);
+	 	return false;
+	}
 	LEDBuffer[pixel] = RGB2Color(r, g, b);
 	LEDBuffer[pixel].r *= br;
 	LEDBuffer[pixel].g *= br;
@@ -597,10 +602,10 @@ unsigned char setPixelColorT(unsigned int pixel, Color_t c) {
 		printf("Unable to set pixel %d (less than zero?)\n", pixel);
 		return false;
 	}
-	// if(pixel > NUM_PIXELS - 1) {
-	// 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
-	// 	return false;
-	// }
+	if(pixel > LED_BUFFER_LENGTH - 1) {
+	 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, LED_BUFFER_LENGTH);
+	 	return false;
+	}
 	LEDBuffer[pixel] = c;
 	return true;
 }
@@ -612,10 +617,10 @@ unsigned char setPixelColorT_B(unsigned int pixel, Color_t c, float br) {
 		printf("Unable to set pixel %d (less than zero?)\n", pixel);
 		return false;
 	}
-	// if(pixel > NUM_PIXELS - 1) {
-	// 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
-	// 	return false;
-	// }
+	if(pixel > LED_BUFFER_LENGTH - 1) {
+		printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, LED_BUFFER_LENGTH);
+	 	return false;
+	}
 	LEDBuffer[pixel] = c;
 	LEDBuffer[pixel].r *= br;
 	LEDBuffer[pixel].g *= br;
@@ -633,10 +638,10 @@ Color_t getPixelColor(unsigned int pixel) {
 		printf("Unable to get pixel %d (less than zero?)\n", pixel);
 		return RGB2Color(0, 0, 0);
 	}
-	// if(pixel > NUM_PIXELS - 1) {
-	// 	printf("Unable to get pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
-	// 	return RGB2Color(0, 0, 0);
-	// }
+	if(pixel > LED_BUFFER_LENGTH - 1) {
+	 	printf("Unable to get pixel %d (LED buffer is %d pixels long)\n", pixel, LED_BUFFER_LENGTH);
+	 	return RGB2Color(0, 0, 0);
+	}
 	return LEDBuffer[pixel];
 }
 
@@ -689,6 +694,7 @@ unsigned char getPWMBit(unsigned int bitPos) {
 }
 
 
+
 /*
 // =================================================================================================
 //	________        ___.
@@ -699,11 +705,12 @@ unsigned char getPWMBit(unsigned int bitPos) {
 //	         \/     \/    \/     /_____/  
 // =================================================================================================
 */
+
 // Dump contents of LED buffer
 void dumpLEDBuffer() {
 	int i;
 	printf("Dumping LED buffer:\n");
-	for(i=0; i<NUM_PIXELS; i++) {
+	for(i=0; i<LED_BUFFER_LENGTH; i++) {
 		printf("R:%X G:%X B:%X\n", LEDBuffer[i].r, LEDBuffer[i].g, LEDBuffer[i].b);
 	}
 }
@@ -867,6 +874,8 @@ void dumpDMA() {
 
 }
 
+
+
 /*
 // =================================================================================================
 //	.___       .__  __      ___ ___                  .___                              
@@ -877,6 +886,7 @@ void dumpDMA() {
 //	         \/                  \/      \/           \/              \/            \/ 
 // =================================================================================================
 */
+
 void initHardware() {
 
 	int i = 0;
@@ -1134,6 +1144,7 @@ void startTransfer() {
 }
 
 
+
 /*
 // =================================================================================================
 //	  ____ ___            .___       __           .____     ___________________          
@@ -1144,6 +1155,7 @@ void startTransfer() {
 //	           |__|        \/     \/          \/          \/        \/         \/     \/ 
 // =================================================================================================
 */
+
 void show() {
 
 	// Clear out the PWM buffer

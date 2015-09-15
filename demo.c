@@ -119,7 +119,7 @@
 #include <signal.h>
 #include <getopt.h>
 #include "ws2812-RPi.h"
-#include <time.h>
+#include "ws2812-RPi-effects.h"
 
 /*
 // =================================================================================================
@@ -213,6 +213,12 @@ void effectsDemo() {
 		// lastGreen = green;
 		lastBlue = blue;
 	}
+
+	for(i=0; i < 200; i++) {
+		Twinkle_T(Color(240,255,255));
+	}
+	Twinkle_Fade();
+
 }
 
 
@@ -306,7 +312,7 @@ int main(int argc, char **argv)
 	}
 
 	// Check "Single Instance"
-	int pid_file = open("/var/run/whatever.pid", O_CREAT | O_RDWR, 0666);
+	int pid_file = open("/var/run/ws2812RPi.pid", O_CREAT | O_RDWR, 0666);
 	int rc = flock(pid_file, LOCK_EX | LOCK_NB);
 	if(rc) {
 	    if(EWOULDBLOCK == errno)
@@ -330,7 +336,7 @@ int main(int argc, char **argv)
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	// How many LEDs?
-	numLEDs = 24;
+	numLEDs = LED_BUFFER_LENGTH;
 
 	// How bright? (Recommend 0.2 for direct viewing @ 3.3V)
 	setBrightness(cfg_brightness);

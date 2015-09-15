@@ -271,21 +271,6 @@ typedef struct {
 } page_map_t;
 
 
-// Contains arrays of control blocks and their related samples.
-// One pixel needs 72 bits (24 bits for the color * 3 to represent them on the wire).
-// 		 768 words = 341.3 pixels
-// 		1024 words = 455.1 pixels
-// The highest I can make this number is 1016. Any higher, and it will start copying garbage to the
-// PWM controller. I think it might be because of the virtual->physical memory mapping not being
-// contiguous, so *pointer+1016 isn't "next door" to *pointer+1017 for some weird reason.
-// However, that's still enough for 451.5 color instructions! If someone has more pixels than that
-// to control, they can figure it out. I tried Hirst's message of having one CB per word, which
-// seems like it might fix that, but I couldn't figure it out.
-#define NUM_DATA_WORDS 1016
-struct control_data_s {
-	dma_cb_t cb[1];
-	uint32_t sample[NUM_DATA_WORDS];
-};
 
 
 #define PAGE_SIZE	4096					// Size of a RAM page to be allocated
@@ -361,14 +346,8 @@ typedef struct {
 
 extern unsigned int numLEDs;		// How many LEDs there are on the chain
 
-#FIXME: remove this
 #define LED_BUFFER_LENGTH 24
-Color_t LEDBuffer[LED_BUFFER_LENGTH];
-
-// PWM waveform buffer (in words), 16 32-bit words are enough to hold 170 wire bits.
-// That's OK if we only transmit from the FIFO, but for DMA, we will use a much larger size.
-// 1024 (4096 bytes) should be enough for over 400 elements. It can be bumped up if you need more!
-unsigned int PWMWaveform[NUM_DATA_WORDS];
+extern Color_t LEDBuffer[LED_BUFFER_LENGTH];
 
 // Set brightness
 unsigned char setBrightness(float b);
