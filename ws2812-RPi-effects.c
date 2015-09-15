@@ -12,21 +12,13 @@
 // https://github.com/adafruit/Adafruit_NeoPixel/blob/master/examples/strandtest/strandtest.ino
 */
 
+#include "ws2812-RPi.h"
+#include "ws2812-RPi-effects.h"
+
+float twinklearray[LED_BUFFER_LENGTH];
+
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
-Color_t Wheel(uint8_t WheelPos);
-void colorWipe(Color_t c, uint8_t wait);
-void rainbow(uint8_t wait);
-void rainbowCycle(uint8_t wait);
-void theaterChase(Color_t c, uint8_t wait);
-void theaterChaseRainbow(uint8_t wait);
-void rainbowCycle_r(uint8_t wait);
-void rainbowCycle_wipe(uint8_t wait);
-void RainFall(Color_t c,uint8_t wait,int sleepafter);
-void Twinkle();
-
-float twinklearray[NUM_PIXELS];
-
 Color_t Wheel(uint8_t WheelPos) {
 	if(WheelPos < 85) {
 		return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
@@ -165,17 +157,22 @@ void theaterChaseRainbow(uint8_t wait) {
 	}
 }
 
-// "Rain Fall" effect - Test
+/**
+ * "Rain Fall" effect - Test
+ * @param c
+ * @param wait [in ms]
+ * @param sleepafert [in s]
+ */
 void RainFall(Color_t c,uint8_t wait,int sleepafter) {
-	int i, j, k;
+	int j, k;
 	j = (numPixels() / 2) - 1;
 	k = j + 1;
-	for (j,k; j >= 0; j--,k++) {
-		//printf("Pixel - %i %i\n", j, k);
+	for (; j >= 0; j--,k++) {
+		// printf("Pixel - %i %i\n", j, k);
 		setPixelColorT(j, c);
 		setPixelColorT(k, c);
 		show();
-		usleep(wait * 10000);
+		usleep(wait * 1000);
 	}
 	sleep(sleepafter);
 	//printf("Done:\n");
@@ -245,6 +242,5 @@ void Twinkle_T(Color_t c) {
 		}
 	}
 	show();
-	// usleep(100000);
-	usleep(1000000);
+	usleep(50000);
 }
