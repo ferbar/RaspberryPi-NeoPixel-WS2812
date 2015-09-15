@@ -1,4 +1,6 @@
 // Set tabs to 4 spaces.
+#ifndef WS2812_HEADER
+#define WS2812_HEADER
 
 // =================================================================================================
 //
@@ -349,8 +351,17 @@ typedef struct {
 	unsigned char b;
 } Color_t;
 
-unsigned int numLEDs;		// How many LEDs there are on the chain
+// LED buffer (this will be translated into pulses in PWMWaveform[])
+typedef struct {
+	unsigned char r;
+	unsigned char g;
+	unsigned char b;
+	unsigned int br;
+} Color_tb;
 
+extern unsigned int numLEDs;		// How many LEDs there are on the chain
+
+#FIXME: remove this
 #define LED_BUFFER_LENGTH 24
 Color_t LEDBuffer[LED_BUFFER_LENGTH];
 
@@ -376,9 +387,11 @@ Color_t Color(unsigned char r, unsigned char g, unsigned char b);
 
 // Set pixel color (24-bit color)
 unsigned char setPixelColor(unsigned int pixel, unsigned char r, unsigned char g, unsigned char b);
+unsigned char setPixelColor_B(unsigned int pixel, unsigned char r, unsigned char g, unsigned char b, float br);
 
 // Set pixel color, by a direct Color_t
 unsigned char setPixelColorT(unsigned int pixel, Color_t c);
+unsigned char setPixelColorT_B(unsigned int pixel, Color_t c, float br);
 
 // Get pixel color
 Color_t getPixelColor(unsigned int pixel);
@@ -396,7 +409,7 @@ Color_t* getPixels();
 void setPWMBit(unsigned int bitPos, unsigned char bit);
 
 // Get an individual bit from the PWM output array, accounting for word boundaries
-unsigned char getPWMBit(unsigned int bitPos); 
+unsigned char getPWMBit(unsigned int bitPos);
 
 
 /*
@@ -507,3 +520,4 @@ void theaterChase(Color_t c, uint8_t wait);
 //Theatre-style crawling lights with rainbow effect
 void theaterChaseRainbow(uint8_t wait);
 
+#endif

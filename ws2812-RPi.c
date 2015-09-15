@@ -87,7 +87,6 @@
 //				Adafruit's NeoPixel driver:
 //				https://github.com/adafruit/Adafruit_NeoPixel/blob/master/Adafruit_NeoPixel.cpp
 
-
 /*
 // =================================================================================================
 //	.___              .__            .___             
@@ -118,6 +117,7 @@
 #include <signal.h>
 #include <sys/file.h>	// Used for single instance check
 
+#include "ws2812-RPi.h"
 
 
 /*
@@ -318,26 +318,6 @@
 #define DMA_DEBUG_FIFO_ERROR			1		// Operational read FIFO error (clear by setting)
 #define DMA_DEBUG_READ_LAST_NOT_SET		0		// AXI bus read last signal not set (clear by setting)
 
-// Control Block (CB) - this tells the DMA controller what to do.
-typedef struct {
-	unsigned int
-		info,		// Transfer Information (TI)
-		src,		// Source address (physical)
-		dst,		// Destination address (bus)
-		length,		// Length in bytes (not words!)
-		stride,		// We don't care about this
-		next,		// Pointer to next control block
-		pad[2];		// These are "reserved" (unused)
-} dma_cb_t;
-
-// The page map contains pointers to memory that we will allocate below. It uses two pointers
-// per address. This is because the software (this program) deals only in virtual addresses,
-// whereas the DMA controller can only access RAM via physical address. (If that's not confusing
-// enough, it writes to peripherals by their bus addresses.)
-typedef struct {
-	uint8_t *virtaddr;
-	uint32_t physaddr;
-} page_map_t;
 
 page_map_t *page_map;						// This will hold the page map, which we'll allocate below
 static uint8_t *virtbase;					// Pointer to some virtual memory that will be allocated
@@ -433,7 +413,16 @@ static void udelay(int us) {
 
 // Shutdown functions
 // --------------------------------------------------------------------------------------------------
-void terminate(int dummy) {
+static void terminate(int dummy) {
+/* --set doesn't like this ;-)
+	// zero out all the LED's
+	int i;
+	for (i=0; i < numPixels(); i++) {
+		setPixelColor(i, 0, 0, 0);
+	}
+	show();
+*/
+
 	// Shut down the DMA controller
 	if(dma_reg) {
 		CLRBIT(dma_reg[DMA_CS], DMA_CS_ACTIVE);
@@ -495,8 +484,12 @@ static void * map_peripheral(uint32_t base, uint32_t len) {
 	int fd = open("/dev/mem", O_RDWR);
 	void * vaddr;
 
-	if (fd < 0)
-		fatal("Failed to open /dev/mem: %m\n");
+	if (fd < 0) {
+		// Got a segmentation fault when not running as root
+		// So instead of using fatal(); I'm going to print the error (and a hint) and then exit();
+		printf("Failed to open /dev/mem: %m (try running as root)\n");
+		exit(EXIT_FAILURE);
+	}
 	vaddr = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base);
 	if (vaddr == MAP_FAILED)
 		fatal("Failed to map peripheral at 0x%08x: %m\n", base);
@@ -518,25 +511,10 @@ static void * map_peripheral(uint32_t base, uint32_t len) {
 */
 
 // Brightness - I recommend 0.2 for direct viewing at 3.3v.
-#define DEFAULT_BRIGHTNESS 1.0
 float brightness = DEFAULT_BRIGHTNESS;
-
-// LED buffer (this will be translated into pulses in PWMWaveform[])
-typedef struct {
-	unsigned char r;
-	unsigned char g;
-	unsigned char b;
-} Color_t;
 
 unsigned int numLEDs;		// How many LEDs there are on the chain
 
-#define LED_BUFFER_LENGTH 24
-Color_t LEDBuffer[LED_BUFFER_LENGTH];
-
-// PWM waveform buffer (in words), 16 32-bit words are enough to hold 170 wire bits.
-// That's OK if we only transmit from the FIFO, but for DMA, we will use a much larger size.
-// 1024 (4096 bytes) should be enough for over 400 elements. It can be bumped up if you need more!
-unsigned int PWMWaveform[NUM_DATA_WORDS];
 
 // Set brightness
 unsigned char setBrightness(float b) {
@@ -560,7 +538,7 @@ void clearPWMBuffer() {
 // Zero out the LED buffer
 void clearLEDBuffer() {
 	int i;
-	for(i=0; i<LED_BUFFER_LENGTH; i++) {
+	for(i=0; i<NUM_PIXELS; i++) {
 		LEDBuffer[i].r = 0;
 		LEDBuffer[i].g = 0;
 		LEDBuffer[i].b = 0;
@@ -585,11 +563,31 @@ unsigned char setPixelColor(unsigned int pixel, unsigned char r, unsigned char g
 		printf("Unable to set pixel %d (less than zero?)\n", pixel);
 		return false;
 	}
-	if(pixel > LED_BUFFER_LENGTH - 1) {
-		printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, LED_BUFFER_LENGTH);
+	// // Lets break things and comment out this
+	// if(pixel > NUM_PIXELS - 1) {
+	// 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
+	// 	return false;
+	// }
+	LEDBuffer[pixel] = RGB2Color(r, g, b);
+	return true;
+}
+
+// Set pixel color (24-bit color) with brightness modifer
+// Brightness of the whole chain will be further adjusted by the show() command
+unsigned char setPixelColor_B(unsigned int pixel, unsigned char r, unsigned char g, unsigned char b, float br) {
+	if(pixel < 0) {
+		printf("Unable to set pixel %d (less than zero?)\n", pixel);
 		return false;
 	}
+	// // Lets break things and comment out this
+	// if(pixel > NUM_PIXELS - 1) {
+	// 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
+	// 	return false;
+	// }
 	LEDBuffer[pixel] = RGB2Color(r, g, b);
+	LEDBuffer[pixel].r *= br;
+	LEDBuffer[pixel].g *= br;
+	LEDBuffer[pixel].b *= br;
 	return true;
 }
 
@@ -599,13 +597,35 @@ unsigned char setPixelColorT(unsigned int pixel, Color_t c) {
 		printf("Unable to set pixel %d (less than zero?)\n", pixel);
 		return false;
 	}
-	if(pixel > LED_BUFFER_LENGTH - 1) {
-		printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, LED_BUFFER_LENGTH);
-		return false;
-	}
+	// if(pixel > NUM_PIXELS - 1) {
+	// 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
+	// 	return false;
+	// }
 	LEDBuffer[pixel] = c;
 	return true;
 }
+
+// Set pixel color, by a direct Color_t with brightness modifer
+// Brightness of the whole chain will be further adjusted by the show() command
+unsigned char setPixelColorT_B(unsigned int pixel, Color_t c, float br) {
+	if(pixel < 0) {
+		printf("Unable to set pixel %d (less than zero?)\n", pixel);
+		return false;
+	}
+	// if(pixel > NUM_PIXELS - 1) {
+	// 	printf("Unable to set pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
+	// 	return false;
+	// }
+	LEDBuffer[pixel] = c;
+	LEDBuffer[pixel].r *= br;
+	LEDBuffer[pixel].g *= br;
+	LEDBuffer[pixel].b *= br;
+	return true;
+}
+
+//
+
+
 
 // Get pixel color
 Color_t getPixelColor(unsigned int pixel) {
@@ -613,10 +633,10 @@ Color_t getPixelColor(unsigned int pixel) {
 		printf("Unable to get pixel %d (less than zero?)\n", pixel);
 		return RGB2Color(0, 0, 0);
 	}
-	if(pixel > LED_BUFFER_LENGTH - 1) {
-		printf("Unable to get pixel %d (LED buffer is %d pixels long)\n", pixel, LED_BUFFER_LENGTH);
-		return RGB2Color(0, 0, 0);
-	}
+	// if(pixel > NUM_PIXELS - 1) {
+	// 	printf("Unable to get pixel %d (LED buffer is %d pixels long)\n", pixel, NUM_PIXELS);
+	// 	return RGB2Color(0, 0, 0);
+	// }
 	return LEDBuffer[pixel];
 }
 
@@ -669,7 +689,6 @@ unsigned char getPWMBit(unsigned int bitPos) {
 }
 
 
-
 /*
 // =================================================================================================
 //	________        ___.
@@ -680,12 +699,11 @@ unsigned char getPWMBit(unsigned int bitPos) {
 //	         \/     \/    \/     /_____/  
 // =================================================================================================
 */
-
 // Dump contents of LED buffer
 void dumpLEDBuffer() {
 	int i;
 	printf("Dumping LED buffer:\n");
-	for(i=0; i<LED_BUFFER_LENGTH; i++) {
+	for(i=0; i<NUM_PIXELS; i++) {
 		printf("R:%X G:%X B:%X\n", LEDBuffer[i].r, LEDBuffer[i].g, LEDBuffer[i].b);
 	}
 }
@@ -849,8 +867,6 @@ void dumpDMA() {
 
 }
 
-
-
 /*
 // =================================================================================================
 //	.___       .__  __      ___ ___                  .___                              
@@ -861,7 +877,6 @@ void dumpDMA() {
 //	         \/                  \/      \/           \/              \/            \/ 
 // =================================================================================================
 */
-
 void initHardware() {
 
 	int i = 0;
@@ -1119,7 +1134,6 @@ void startTransfer() {
 }
 
 
-
 /*
 // =================================================================================================
 //	  ____ ___            .___       __           .____     ___________________          
@@ -1130,7 +1144,6 @@ void startTransfer() {
 //	           |__|        \/     \/          \/          \/        \/         \/     \/ 
 // =================================================================================================
 */
-
 void show() {
 
 	// Clear out the PWM buffer
@@ -1212,109 +1225,4 @@ The FIFO only has enough words for about 7 LEDs, which is why we use DMA instead
 // */
 
 }
-
-
-/*
-// =================================================================================================
-//	___________ _____  _____              __          
-//	\_   _____// ____\/ ____\____   _____/  |_  ______
-//	 |    __)_\   __\\   __\/ __ \_/ ___\   __\/  ___/
-//	 |        \|  |   |  | \  ___/\  \___|  |  \___ \ 
-//	/_______  /|__|   |__|  \___  >\___  >__| /____  >
-//	        \/                  \/     \/          \/ 
-// =================================================================================================
-// The effects in this section are adapted from the Adafruit NeoPixel library at:
-// https://github.com/adafruit/Adafruit_NeoPixel/blob/master/examples/strandtest/strandtest.ino
-*/
-
-// Input a value 0 to 255 to get a color value.
-// The colours are a transition r - g - b - back to r.
-Color_t Wheel(uint8_t WheelPos) {
-	if(WheelPos < 85) {
-		return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-	} else if(WheelPos < 170) {
-		WheelPos -= 85;
-		return Color(255 - WheelPos * 3, 0, WheelPos * 3);
-	} else {
-		WheelPos -= 170;
-		return Color(0, WheelPos * 3, 255 - WheelPos * 3);
-	}
-}
-
-
-// Fill the dots one after the other with a color
-void colorWipe(Color_t c, uint8_t wait) {
-	uint16_t i;
-	for(i=0; i<numPixels(); i++) {
-		setPixelColorT(i, c);
-		show();
-		usleep(wait * 1000);
-	}
-}
-
-// Rainbow
-void rainbow(uint8_t wait) {
-	uint16_t i, j;
-
-	for(j=0; j<256; j++) {
-		for(i=0; i<numPixels(); i++) {
-			setPixelColorT(i, Wheel((i+j) & 255));
-		}
-		show();
-		usleep(wait * 1000);
-	}
-}
-
-// Slightly different, this makes the rainbow equally distributed throughout
-void rainbowCycle(uint8_t wait) {
-	uint16_t i, j;
-
-	for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
-		for(i=0; i<numPixels(); i++) {
-			setPixelColorT(i, Wheel(((i * 256 / numPixels()) + j) & 255));
-		}
-		show();
-		usleep(wait * 1000);
-	}
-}
-
-//Theatre-style crawling lights.
-void theaterChase(Color_t c, uint8_t wait) {
-	unsigned int j, q, i;
-	for (j=0; j<15; j++) {  //do this many cycles of chasing
-		for (q=0; q < 3; q++) {
-			for (i=0; i < numPixels(); i=i+3) {
-				setPixelColorT(i+q, c);			// Turn every third pixel on
-			}
-			show();
-     
-			usleep(wait * 1000);
-
-			for (i=0; i < numPixels(); i=i+3) {
-				setPixelColor(i+q, 0, 0, 0);	// Turn every third pixel off
-			}
-		}
-	}
-}
-
-//Theatre-style crawling lights with rainbow effect
-void theaterChaseRainbow(uint8_t wait) {
-	int j, q, i;
-	for (j=0; j < 256; j+=4) {     // cycle through every 4th color on the wheel
-		for (q=0; q < 3; q++) {
-			for (i=0; i < numPixels(); i=i+3) {
-				setPixelColorT(i+q, Wheel((i+j) % 255));    //turn every third pixel on
-			}
-			show();
-
-			usleep(wait * 1000);
-       
-			for (i=0; i < numPixels(); i=i+3) {
-				setPixelColor(i+q, 0, 0, 0);        //turn every third pixel off
-			}
-		}
-	}
-}
-
-
 
